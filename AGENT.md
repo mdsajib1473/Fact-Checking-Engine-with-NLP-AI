@@ -156,13 +156,13 @@ Harden CSRF protection, input sanitization, rate limiting via Django middleware,
 ## 7. Open Items / Notes
 *(Update this section as decisions are made during development)*
 
-**Phase 1 — Completed:** Django (`core`) + `factcheck` app scaffolded; 5 models with UUID PKs + initial migration; Neon wired via `dj-database-url` (SSL-required, SQLite local fallback); env-driven secrets via python-dotenv; Tailwind CLI pipeline (dark mode `class`); base/home templates with dark-mode toggle + language switcher shell; built-in auth URLs; Render `render.yaml` + `build.sh`. `check` passes, migrations apply cleanly (SQLite), Tailwind + collectstatic verified.
+**Phase 1 — Completed:** Django (`core`) + `factcheck` app scaffolded; 5 models with UUID PKs + initial migration; Neon wired via `dj-database-url` (SSL-required, SQLite local fallback); env-driven secrets via python-dotenv; Tailwind CLI pipeline (dark mode `class`); base/home templates with dark-mode toggle + language switcher shell; built-in auth URLs; Render `render.yaml` + `build.sh`. `check` passes, Tailwind + collectstatic verified, and migrations apply cleanly against the live Neon database (Postgres 18.4, pgvector 0.8.1) — all 5 tables created, `claim_embeddings.embedding` confirmed as a real `vector` column.
 
-- [ ] Confirm Neon Postgres project created and connection string added to `.env`
-      *(Phase 1: `.env` mechanism + `NEON_DATABASE_URL` parsing ready; awaiting the actual connection string to run migrations against Neon.)*
-- [ ] Confirm `pgvector` extension enabled on the Neon database (`CREATE EXTENSION vector;`)
-      *(Phase 1: documented in README + `ClaimEmbedding` docstring as a manual pre-migration step; kept out of migrations so the SQLite fallback still works.)*
-- [ ] Confirm Google Fact Check Tools API key obtained and added to `.env` *(placeholder key in `.env.example`)*
-- [ ] Confirm Groq API key obtained and added to `.env` *(placeholder key in `.env.example`)*
+- [x] Confirm Neon Postgres project created and connection string added to `.env`
+      *(Connected to Neon Postgres 18.4; `migrate` applied cleanly.)*
+- [x] Confirm `pgvector` extension enabled on the Neon database (`CREATE EXTENSION vector;`)
+      *(Enabled on Neon, version 0.8.1. Kept out of migrations so the local SQLite fallback still works.)*
+- [x] Confirm Google Fact Check Tools API key obtained and added to `.env`
+- [x] Confirm Groq API key obtained and added to `.env`
 - [ ] Decide on rate-limit thresholds per IP (placeholder: 10 requests/hour for unauthenticated users) *(Phase 5)*
 - [ ] Decide on Bangla NLP model specifics if spaCy's Bangla support proves insufficient *(Phase 2)*
