@@ -40,7 +40,7 @@ An AI-powered fact-checking system that accepts any text, URL, or social media p
 2. Always respond in the same language the user typed (Bangla → Bangla).
 3. Every verdict result MUST include the disclaimer:
    "This is an AI-generated assessment, not a final ruling on truth. Verify with the cited sources."
-4. Commit and push code if/when necessary with 3 to 5 words.
+4. Don't Commit and push code (I wil do it manually after testing manual testing). (Ask if pushing is mandatory)
 5. Write clean, well-commented code — every function and class must have a docstring.
 6. Follow secure coding practices — never expose secrets, always use CSRF protection, validate and sanitize all user inputs before processing.
 7. Write scalable code — keep business logic in services/, keep views thin, never hardcode values that belong in settings or .env.
