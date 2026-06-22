@@ -155,6 +155,50 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
+# --- NLP / claim extraction (Phase 2) ---
+# Thresholds and model names live here, never hardcoded in services (AGENT.md
+# Rule 7). Override any of these via the environment without touching code.
+
+
+def env_float(key, default):
+    """Read a float env var, falling back to ``default`` if unset or unparseable."""
+    try:
+        return float(os.environ.get(key, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def env_int(key, default):
+    """Read an int env var, falling back to ``default`` if unset or unparseable."""
+    try:
+        return int(os.environ.get(key, default))
+    except (TypeError, ValueError):
+        return int(default)
+
+
+# Minimum confidence a candidate claim must reach to be returned (0.0–1.0).
+CLAIM_CONFIDENCE_THRESHOLD = env_float("CLAIM_CONFIDENCE_THRESHOLD", 0.5)
+
+# spaCy English pipeline used for Pass 1 dependency-parse extraction. Installed
+# once via `python -m spacy download en_core_web_sm` (see README, NLP model setup).
+SPACY_EN_MODEL = os.environ.get("SPACY_EN_MODEL", "en_core_web_sm")
+
+# Multilingual HuggingFace model for the Pass 2 fallback (Bangla + low-confidence
+# English). Lazy-loaded on first use; if it cannot load (e.g. Render free-tier
+# RAM), claim extraction degrades to a heuristic fallback rather than crashing.
+HF_FALLBACK_MODEL = os.environ.get(
+    "HF_FALLBACK_MODEL", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
+)
+
+# Set to "0"/"false" to skip the transformer entirely and always use the
+# heuristic fallback (useful for fast CI and tight-memory deploys).
+ENABLE_HF_FALLBACK = env_bool("ENABLE_HF_FALLBACK", default=True)
+
+# Length bounds for the /api/v1/extract/ development endpoint (AGENT.md Rule 6).
+EXTRACT_INPUT_MIN_CHARS = env_int("EXTRACT_INPUT_MIN_CHARS", 10)
+EXTRACT_INPUT_MAX_CHARS = env_int("EXTRACT_INPUT_MAX_CHARS", 5000)
+
+
 # --- Production hardening (active only when DEBUG is False) ---
 # Foundational flags for Render; deeper hardening (HSTS preload, rate limiting)
 # lands in Phase 5.

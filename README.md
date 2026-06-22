@@ -17,8 +17,9 @@ URLs, cross-references trusted sources, and returns a transparent, source-cited
 verdict. See [AGENT.md](AGENT.md) for the locked tech stack, rules, structure,
 and database schema.
 
-> **Phase status:** Phase 1 (Foundation) complete - Django + Neon + scaffold.
-> No AI/NLP/LLM logic yet; those arrive in later phases.
+> **Phase status:** Phase 2 (Claim Extraction Pipeline) complete - spaCy +
+> HuggingFace NLP extraction with English/Bangla support. Evidence retrieval,
+> the verdict engine, and the real UI arrive in later phases.
 
 ## Tech stack (Phase 1)
 
@@ -71,6 +72,41 @@ structure).
    venv/Scripts/python manage.py migrate
    venv/Scripts/python manage.py runserver
    ```
+
+## NLP model setup (Phase 2)
+
+The claim-extraction pipeline uses two models. Neither ships in
+`requirements.txt` — they are one-time downloads so the dependency install stays
+lean and reproducible.
+
+1. **spaCy English model** (`en_core_web_sm`, ~13 MB) — used for the English
+   dependency-parse pass. Download it once after installing requirements:
+
+   ```bash
+   venv/Scripts/python -m spacy download en_core_web_sm   # Windows
+   # python -m spacy download en_core_web_sm               # macOS/Linux
+   ```
+
+2. **HuggingFace fallback model**
+   (`MoritzLaurer/mDeBERTa-v3-base-mnli-xnli`, ~560 MB) — a multilingual
+   zero-shot classifier used for **Bangla** text and as a fallback when spaCy is
+   unavailable. It downloads **automatically on first use** and is cached under
+   `~/.cache/huggingface`; no manual step is required.
+
+   To skip the transformer entirely (e.g. tight-memory environments or fast CI),
+   set `ENABLE_HF_FALLBACK=0` — extraction then degrades to a heuristic sentence
+   pass instead of loading the model. `torch` is installed as the CPU-only build
+   to stay within Render's free tier.
+
+### Try the extraction endpoint
+
+With the server running, the Phase 2 development harness accepts raw text:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/extract/ \
+  -H "Content-Type: application/json" \
+  -d '{"text": "The Earth orbits the Sun. Water boils at 100 degrees Celsius.", "source_type": "text"}'
+```
 
 ## Neon + pgvector (required before migrating against Neon)
 

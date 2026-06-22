@@ -158,6 +158,15 @@ Harden CSRF protection, input sanitization, rate limiting via Django middleware,
 
 **Phase 1 — Completed:** Django (`core`) + `factcheck` app scaffolded; 5 models with UUID PKs + initial migration; Neon wired via `dj-database-url` (SSL-required, SQLite local fallback); env-driven secrets via python-dotenv; Tailwind CLI pipeline (dark mode `class`); base/home templates with dark-mode toggle + language switcher shell; built-in auth URLs; Render `render.yaml` + `build.sh`. `check` passes, Tailwind + collectstatic verified, and migrations apply cleanly against the live Neon database (Postgres 18.4, pgvector 0.8.1) — all 5 tables created, `claim_embeddings.embedding` confirmed as a real `vector` column.
 
+**Phase 2 — Completed:** Claim extraction pipeline (NLP). `language_service.detect_language()` (script-aware + langdetect) returns `en`/`bn`/`unknown`. `claim_extraction.extract_claims()` is the sole public entry point: sanitizes input (strips HTML/scripts, collapses whitespace — Rule 12), then runs **Pass 1** (spaCy `en_core_web_sm` dependency parse → per-clause SVO claims, splitting coordinated compound sentences, skipping questions/imperatives, scoring opinions/hedges low) and **Pass 2** (HuggingFace multilingual zero-shot fallback for Bangla / when spaCy is unavailable). Only claims at/above `settings.CLAIM_CONFIDENCE_THRESHOLD` (default 0.5, Rule 7) are returned. `claim_service.process_text_input()` is the thin orchestration layer that persists each claim to the `Claim` model (all DB writes live here, none in extraction — Rule 13). Dev testing harness `POST /api/v1/extract/` (validated 10–5000 chars, Rule 6) returns `{claims, language, count}`. 24 unit tests across language/extraction/service/API all pass; `manage.py check` clean.
+
+**Phase 2 decisions / notes:**
+
+- **No spaCy Bangla pipeline exists.** spaCy ships no pretrained Bangla model (there is no `bn_core_news_*`; only a rule-based `Bengali` language class with no parser/tagger). **Decision:** Bangla text routes entirely through the HuggingFace Pass-2 fallback rather than spaCy, exactly as Phase 2 anticipated. spaCy is English-only here.
+- **HF fallback model:** `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` (multilingual, supports Bangla) used as a zero-shot classifier with labels `factual claim` / `opinion` / `question`; a sentence is kept only when its top label is `factual claim`.
+- **Free-tier memory (Render 512 MB):** `torch` + a multilingual transformer + Django cannot coexist in 512 MB, so the model is **lazy-loaded** as a module-level singleton (loaded once on first use — never per request, never at Django startup, so boot stays fast) and `torch` is pinned to the **CPU-only build** (`torch==2.12.1+cpu` via the PyTorch CPU index). If the model cannot load (no transformers/torch, or out of memory), extraction **degrades gracefully** to a heuristic sentence pass instead of crashing, and the suite stays runnable offline. Set `ENABLE_HF_FALLBACK=0` to force heuristic-only. Models are **not** in `requirements.txt` — `en_core_web_sm` is a one-time `python -m spacy download`, and the HF model auto-downloads to `~/.cache/huggingface` on first use (documented in README → "NLP model setup").
+- **English uses spaCy only** when it is loaded: an empty spaCy result is treated as a confident "no claims" (question/opinion), so the transformer never loads for ordinary English input (saving free-tier RAM); the fallback is reserved for Bangla and for when spaCy is unavailable.
+
 - [x] Confirm Neon Postgres project created and connection string added to `.env`
       *(Connected to Neon Postgres 18.4; `migrate` applied cleanly.)*
 - [x] Confirm `pgvector` extension enabled on the Neon database (`CREATE EXTENSION vector;`)
@@ -165,4 +174,5 @@ Harden CSRF protection, input sanitization, rate limiting via Django middleware,
 - [x] Confirm Google Fact Check Tools API key obtained and added to `.env`
 - [x] Confirm Groq API key obtained and added to `.env`
 - [ ] Decide on rate-limit thresholds per IP (placeholder: 10 requests/hour for unauthenticated users) *(Phase 5)*
-- [ ] Decide on Bangla NLP model specifics if spaCy's Bangla support proves insufficient *(Phase 2)*
+- [x] Decide on Bangla NLP model specifics if spaCy's Bangla support proves insufficient *(Phase 2)*
+      *(No pretrained spaCy Bangla pipeline exists; Bangla routes through the HuggingFace `mDeBERTa-v3-base-mnli-xnli` zero-shot fallback. See "Phase 2 decisions" above.)*

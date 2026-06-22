@@ -1,7 +1,4 @@
-# Phase 1 — Foundation dependencies only.
-# AI / NLP / LLM packages (spaCy, HuggingFace, Groq SDK, Celery, Redis) are
-# intentionally NOT here — they belong to later phases per AGENT.md Rule 1.
-
+# --- Phase 1 — Foundation ---
 Django>=5.2,<5.3
 djangorestframework>=3.15,<3.16
 psycopg2-binary>=2.9,<3.0
@@ -12,3 +9,20 @@ pgvector>=0.3,<0.4
 # Production server + static file serving for Render deployment
 gunicorn>=22.0,<24.0
 whitenoise>=6.7,<7.0
+
+# --- Phase 2 — Claim extraction (NLP) ---
+# torch is pinned to the CPU-only build to stay within Render's free-tier
+# limits. The --extra-index-url makes pip pull the +cpu wheel on both Linux
+# (Render) and Windows (local) instead of the multi-GB CUDA build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.12.1+cpu
+transformers>=4.40,<5.0
+spacy>=3.7,<3.9
+langdetect>=1.0.9,<2.0
+requests>=2.31,<3.0
+
+# NLP MODELS ARE NOT INSTALLED VIA requirements.txt (one-time manual step):
+#   python -m spacy download en_core_web_sm
+# The HuggingFace fallback model (MoritzLaurer/mDeBERTa-v3-base-mnli-xnli) is
+# downloaded automatically on first use and cached under ~/.cache/huggingface.
+# See README.md → "NLP model setup".
